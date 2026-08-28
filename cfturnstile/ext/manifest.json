@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "cf-turnstile-click-patch",
   "version": "1.0",
-  "description": "Fix CDP iframe MouseEvent.screenX/Y so Turnstile checkbox clicks look like OS clicks.",
+  "description": "Fix CDP/XTEST iframe MouseEvent.screenX/Y so Turnstile checkbox clicks look like OS clicks.",
+  "host_permissions": ["*://*/*"],
   "content_scripts": [
     {
       "js": ["script.js"],
@@ -10,6 +11,7 @@
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true,
+      "match_origin_as_fallback": true,
       "world": "MAIN"
     }
   ]

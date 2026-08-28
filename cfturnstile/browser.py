@@ -56,11 +56,17 @@ def find_chrome() -> str | None:
 def launch_extension_args() -> list[str]:
     ext = str(extension_dir())
     return [
-        "--disable-features=DisableLoadExtensionCommandLineSwitch",
         f"--disable-extensions-except={ext}",
         f"--load-extension={ext}",
+        "--enable-extensions",
+        "--ozone-platform=x11",
         "--no-sandbox",
         "--disable-dev-shm-usage",
+        # Last --disable-features wins in Chrome. Include ExtensionsMenuAccessControl
+        # or Chrome 137+ withholds host permissions and content scripts never run
+        # on https:// pages (extension shows as enabled on chrome://extensions).
+        "--enable-unsafe-extension-debugging",
+        "--disable-features=DisableLoadExtensionCommandLineSwitch,ExtensionsMenuAccessControl",
     ]
 
 

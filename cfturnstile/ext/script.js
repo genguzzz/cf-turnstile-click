@@ -3,18 +3,48 @@
   globalThis.__cfTurnstileClickPatch = 1;
 
   const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const framed = (() => {
+    try {
+      return window.top !== window;
+    } catch (_) {
+      return true;
+    }
+  })();
+  // Iframe window.screenX is often the widget offset (50–90). Using that as
+  // origin makes patched screenX stay < 100 and Cloudflare still rejects.
   const originX =
-    typeof window.screenX === "number" && window.screenX > 50
+    !framed && typeof window.screenX === "number" && window.screenX > 50
       ? window.screenX
       : rand(240, 960);
   const originY =
-    typeof window.screenY === "number" && window.screenY > 40
+    !framed && typeof window.screenY === "number" && window.screenY > 40
       ? window.screenY
       : rand(80, 420);
+
+  function inIframe() {
+    try {
+      return window.top !== window;
+    } catch (_) {
+      return true;
+    }
+  }
 
   function clientOf(evt, axis) {
     if (axis === "X") return Number(evt.clientX || evt.x || 0) || 0;
     return Number(evt.clientY || evt.y || 0) || 0;
+  }
+
+  function needsPatch(native, client) {
+    if (!Number.isFinite(native)) return true;
+    // CDP Input.dispatchMouseEvent in a cross-origin iframe:
+    // screenX === clientX (often < 120).
+    if (native < 120 && Math.abs(native - client) < 2) return true;
+    // Linux XTEST / Ozone: the iframe still gets a small screenX (widget
+    // offset ~50–90), but it is NOT equal to clientX. Cloudflare's check
+    // is still "screenX < 100" so the click is discarded. macOS Quartz
+    // reports display coordinates (hundreds) and must not be rewritten.
+    if (inIframe() && native < 120) return true;
+    return false;
   }
 
   function patchProto(proto) {
@@ -34,11 +64,7 @@
               native = origGet ? origGet.call(this) : 0;
             } catch (_) {}
             const client = clientOf(this, axis);
-            // CDP Input.dispatchMouseEvent inside a cross-origin iframe:
-            // screenX === clientX (often < 120). Real OS clicks are hundreds.
-            if (!Number.isFinite(native) || (native < 120 && Math.abs(native - client) < 2)) {
-              return origin + client;
-            }
+            if (needsPatch(native, client)) return origin + client;
             return native;
           },
         });
@@ -48,4 +74,10 @@
 
   patchProto(MouseEvent.prototype);
   if (typeof PointerEvent !== "undefined") patchProto(PointerEvent.prototype);
+  try {
+    document.documentElement.setAttribute("data-cf-ts-click", "1");
+  } catch (_) {}
+  try {
+    console.log("[cf-turnstile-click]", location.hostname, inIframe() ? "iframe" : "top");
+  } catch (_) {}
 })();

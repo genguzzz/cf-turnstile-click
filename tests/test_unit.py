@@ -26,10 +26,25 @@ def test_extension_files():
 
 
 def test_cdp_iframe_screen_leak_heuristic():
+    # CDP: screenX == clientX < 120
     native, client = 26, 26
     assert native < 120 and abs(native - client) < 2
+    # Linux XTEST inside the Turnstile iframe: screenX is the widget offset
+    # (~50–90), not clientX. Old heuristic missed this and CF discarded the click.
+    native_xtest, client_xtest = 74, 26
+    assert native_xtest < 120 and abs(native_xtest - client_xtest) >= 2
+    # Real macOS OS click (display coordinates) must stay untouched.
     native_os, client_os = 412, 26
-    assert not (native_os < 120 and abs(native_os - client_os) < 2)
+    assert native_os >= 120
+
+
+def test_extension_patches_iframe_xtest_offset():
+    js = (extension_dir() / "script.js").read_text(encoding="utf-8")
+    assert "inIframe" in js
+    assert "needsPatch" in js
+    assert "framed" in js
+    manifest = (extension_dir() / "manifest.json").read_text(encoding="utf-8")
+    assert "match_origin_as_fallback" in manifest
 
 
 def test_launch_kwargs_keep_extensions():
@@ -41,6 +56,8 @@ def test_launch_kwargs_keep_extensions():
     assert "--disable-extensions" in kw["ignore_default_args"]
     joined = " ".join(kw["args"])
     assert "--load-extension=" in joined
+    assert "--ozone-platform=x11" in joined
+    assert "ExtensionsMenuAccessControl" in joined
     assert "--no-sandbox" in joined
     chrome = find_chrome()
     if chrome:

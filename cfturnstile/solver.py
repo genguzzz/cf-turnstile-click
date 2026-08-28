@@ -133,46 +133,75 @@ def click_checkbox_os(page, box: dict) -> str:
 
 def click_checkbox_cdp(page, box: dict) -> str:
     vx, vy = checkbox_point(box)
-    page.mouse.click(vx, vy)
-    return "cdp-mouse"
+    try:
+        page.mouse.move(vx, vy)
+        time.sleep(0.12)
+        page.mouse.click(vx, vy, delay=80)
+        return "cdp-mouse"
+    except Exception as e:
+        _dbg(f"cdp-mouse failed ({e!r})")
+    iframe = page.locator(IFRAME_SEL).first
+    try:
+        if iframe.count() > 0:
+            iframe.click(position={"x": 26, "y": 32}, timeout=2000)
+            return "cdp-iframe"
+    except Exception as e:
+        _dbg(f"cdp-iframe click failed ({e!r})")
+    return "cdp-miss"
 
 
-def solve(page, timeout_s: int = 25) -> str:
+def solve(page, timeout_s: int = 40) -> str:
     """Click the Turnstile checkbox on an already-open page and return the token.
 
     ``page`` is a Patchright/Playwright page that already shows the widget.
     """
     wait_widget_attached(page, min(20_000, timeout_s * 1000))
     _dbg("widget attached")
+    if os.environ.get("CF_TURNSTILE_DEBUG", "").strip().lower() in {"1", "true", "yes"}:
+
+        def _con(msg) -> None:
+            text = ""
+            try:
+                text = str(msg.text)
+            except Exception:
+                return
+            if "cf-turnstile-click" in text or "challenges.cloudflare" in text:
+                _dbg(f"console {text[:180]}")
+
+        try:
+            page.on("console", _con)
+        except Exception:
+            pass
     time.sleep(1.0)
     deadline = time.time() + timeout_s
-    attempts = 0
+    clicked = False
     while time.time() < deadline:
         tok = token_from_locator(page)
         if tok:
             _dbg(f"token len={len(tok)}")
             return tok
         box = widget_box(page)
-        if box and attempts < 3:
-            if attempts == 0:
+        if box and not clicked:
+            # Linux XTEST does not reach Chrome OOPIF (Turnstile iframe).
+            # Extra clicks while the widget says "Verifying..." abort the challenge.
+            linux = sys.platform.startswith("linux")
+            if linux:
+                kind = click_checkbox_cdp(page, box)
+                _dbg(f"{kind} box={box}")
+            else:
                 try:
                     backend = click_checkbox_os(page, box)
                     _dbg(f"os click {backend} box={box}")
                 except Exception as e:
                     _dbg(f"os click failed ({e!r}), cdp fallback")
                     click_checkbox_cdp(page, box)
-            else:
-                _dbg("cdp checkbox click (extension screenX patch)")
+            clicked = True
+            if os.environ.get("CF_TURNSTILE_DEBUG", "").strip().lower() in {"1", "true", "yes"}:
                 try:
-                    click_checkbox_cdp(page, box)
+                    page.screenshot(path="/tmp/cf-turnstile-after-click.png", full_page=True)
+                    _dbg("screenshot /tmp/cf-turnstile-after-click.png")
                 except Exception:
-                    try:
-                        click_checkbox_os(page, box)
-                    except Exception:
-                        pass
-            attempts += 1
-            time.sleep(1.6)
-            continue
+                    pass
         time.sleep(0.4)
     try:
         page.screenshot(path="/tmp/cf-turnstile-fail.png", full_page=True)
