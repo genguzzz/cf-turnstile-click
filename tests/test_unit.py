@@ -34,11 +34,17 @@ def test_cdp_iframe_screen_leak_heuristic():
 
 def test_launch_kwargs_keep_extensions():
     from cfturnstile import launch_kwargs
+    from cfturnstile.browser import find_chrome
 
     kw = launch_kwargs()
-    assert kw["channel"] == "chrome"
     assert kw["no_viewport"] is True
     assert "--disable-extensions" in kw["ignore_default_args"]
     joined = " ".join(kw["args"])
     assert "--load-extension=" in joined
-    assert "DisableLoadExtensionCommandLineSwitch" in joined
+    assert "--no-sandbox" in joined
+    chrome = find_chrome()
+    if chrome:
+        assert kw.get("executable_path") == chrome
+        assert "channel" not in kw
+    else:
+        assert kw.get("channel") == "chrome"
