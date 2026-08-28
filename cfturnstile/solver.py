@@ -24,7 +24,8 @@ GEO_JS = """() => ({
   outerW: window.outerWidth,
   outerH: window.outerHeight,
   innerW: window.innerWidth,
-  innerH: window.innerHeight
+  innerH: window.innerHeight,
+  dpr: window.devicePixelRatio || 1
 })"""
 
 
@@ -120,12 +121,14 @@ def _page_geo(page) -> dict:
 
 def click_checkbox_os(page, box: dict) -> str:
     vx, vy = checkbox_point(box)
-    sx, sy = viewport_point_to_screen(_page_geo(page), vx, vy)
+    geo = _page_geo(page)
+    sx, sy = viewport_point_to_screen(geo, vx, vy)
     try:
         page.bring_to_front()
     except Exception:
         pass
-    return os_click(sx, sy)
+    _dbg(f"click viewport=({vx:.1f},{vy:.1f}) screen=({sx:.1f},{sy:.1f}) geo={geo}")
+    return os_click(sx, sy, viewport=(vx, vy))
 
 
 def click_checkbox_cdp(page, box: dict) -> str:

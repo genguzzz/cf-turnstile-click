@@ -97,11 +97,14 @@ def _activate_chrome() -> None:
         time.sleep(0.25)
         return
     if system == "Linux" and shutil.which("xdotool"):
-        subprocess.run(
-            ["xdotool", "search", "--name", "Google Chrome", "windowactivate"],
-            check=False,
-            capture_output=True,
-        )
+        for needle in ("Chromium", "Google Chrome", "Chrome", "chromium"):
+            r = subprocess.run(
+                ["xdotool", "search", "--name", needle, "windowactivate"],
+                check=False,
+                capture_output=True,
+            )
+            if r.returncode == 0:
+                break
         time.sleep(0.15)
 
 
@@ -120,18 +123,66 @@ def _windows_click(x: float, y: float, button: Button = "left") -> None:
     user32.mouse_event(down_up[1], 0, 0, 0, 0)
 
 
-def _linux_click(x: float, y: float, button: Button = "left") -> None:
+def _xdotool_window_id() -> str | None:
+    queries = (
+        ["--onlyvisible", "--class", "Chromium"],
+        ["--onlyvisible", "--class", "chromium"],
+        ["--onlyvisible", "--class", "Google-chrome"],
+        ["--onlyvisible", "--name", "NodeSeek"],
+        ["--onlyvisible", "--name", "Chromium"],
+        ["--onlyvisible", "--name", "Chrome"],
+    )
+    for extra in queries:
+        r = subprocess.run(
+            ["xdotool", "search", *extra],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        ids = [i for i in (r.stdout or "").split() if i.isdigit()]
+        if ids:
+            return ids[-1]
+    return None
+
+
+def _linux_click(
+    x: float,
+    y: float,
+    button: Button = "left",
+    viewport: tuple[float, float] | None = None,
+) -> None:
     if not shutil.which("xdotool"):
         raise RuntimeError("Linux OS click needs xdotool on PATH")
     btn = {"left": "1", "middle": "2", "right": "3"}[button]
+    wid = _xdotool_window_id()
+    if wid:
+        subprocess.run(
+            ["xdotool", "windowactivate", "--sync", wid],
+            check=False,
+            capture_output=True,
+        )
+        time.sleep(0.1)
     subprocess.run(
-        ["xdotool", "mousemove", str(int(round(x))), str(int(round(y))), "click", btn],
+        [
+            "xdotool",
+            "mousemove",
+            "--sync",
+            str(int(round(x))),
+            str(int(round(y))),
+            "click",
+            btn,
+        ],
         check=True,
         capture_output=True,
     )
 
 
-def os_click(x: float, y: float, button: Button = "left") -> str:
+def os_click(
+    x: float,
+    y: float,
+    button: Button = "left",
+    viewport: tuple[float, float] | None = None,
+) -> str:
     """Click at global screen coordinates. Returns the backend used."""
     system = platform.system()
     _activate_chrome()
@@ -146,6 +197,6 @@ def os_click(x: float, y: float, button: Button = "left") -> str:
         _windows_click(x, y, button=button)
         return "win32"
     if system == "Linux":
-        _linux_click(x, y, button=button)
+        _linux_click(x, y, button=button, viewport=viewport)
         return "xdotool"
     raise RuntimeError(f"OS click unsupported on {system}")
