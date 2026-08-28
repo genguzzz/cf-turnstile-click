@@ -1,0 +1,43 @@
+[project]
+name = "cfturnstile"
+version = "0.1.0"
+description = "Solve Cloudflare Turnstile checkboxes from Patchright: OS-level click + CDP screenX iframe patch"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "gengu6585" }]
+keywords = ["cloudflare", "turnstile", "patchright", "playwright", "captcha"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "patchright>=1.50.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.urls]
+Homepage = "https://github.com/gengu6585/cf-turnstile-click"
+Issues = "https://github.com/gengu6585/cf-turnstile-click/issues"
+
+[project.scripts]
+cf-turnstile = "cfturnstile.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["cfturnstile*"]
+
+[tool.setuptools.package-data]
+cfturnstile = ["ext/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
