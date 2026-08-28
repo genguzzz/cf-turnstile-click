@@ -23,7 +23,7 @@ Inspired by [Theyka/Turnstile-Solver](https://github.com/Theyka/Turnstile-Solver
 ## Install
 
 ```bash
-pip install "git+https://github.com/gengu6585/cf-turnstile-click.git"
+pip install "git+https://github.com/genguzzz/cf-turnstile-click.git"
 python -m patchright install chrome   # or use the Chrome already on the machine
 ```
 

@@ -5,7 +5,7 @@ description = "Solve Cloudflare Turnstile checkboxes from Patchright: OS-level c
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-authors = [{ name = "gengu6585" }]
+authors = [{ name = "genguzzz" }]
 keywords = ["cloudflare", "turnstile", "patchright", "playwright", "captcha"]
 classifiers = [
     "License :: OSI Approved :: MIT License",
@@ -23,8 +23,8 @@ dependencies = [
 dev = ["pytest>=8.0.0"]
 
 [project.urls]
-Homepage = "https://github.com/gengu6585/cf-turnstile-click"
-Issues = "https://github.com/gengu6585/cf-turnstile-click/issues"
+Homepage = "https://github.com/genguzzz/cf-turnstile-click"
+Issues = "https://github.com/genguzzz/cf-turnstile-click/issues"
 
 [project.scripts]
 cf-turnstile = "cfturnstile.cli:main"
