@@ -14,6 +14,7 @@ from bypass.plugins.cf_waf import CfWafPlugin
 from bypass.plugins.generic_wait import GenericWaitPlugin
 from bypass.plugins.hcaptcha import HcaptchaPlugin
 from bypass.plugins.recaptcha import RecaptchaPlugin
+from bypass.plugins.bilibili_geetest import BilibiliGeetestPlugin
 
 
 class PluginRegistry:
@@ -91,6 +92,7 @@ class PluginRegistry:
 # Register default plugins
 PluginRegistry.register(CfWafPlugin)
 PluginRegistry.register(CfTurnstilePlugin)
+PluginRegistry.register(BilibiliGeetestPlugin)
 PluginRegistry.register(RecaptchaPlugin)
 PluginRegistry.register(HcaptchaPlugin)
 PluginRegistry.register(GenericWaitPlugin)
