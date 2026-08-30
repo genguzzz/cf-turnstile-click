@@ -35,34 +35,76 @@
 - `cookie_header`: 格式化好的单行 Cookie 字符串（用于 HTTP Request Header）
 - `headers`: 包含精确 User-Agent、Sec-CH-UA、Sec-Fetch-* 的完整请求头，可直接在 `curl_cffi` / Python `requests` / Golang 中复用。
 
-## 4. 插件开发规范
+## 4. 插件开发与高级定制规范
 
-所有插件继承自 `bypass.plugins.base.BaseChallengePlugin`：
+所有插件继承自 `bypass.plugins.base.BaseChallengePlugin`，支持自定义优先级、置信度判定与解盾逻辑：
 
 ```python
 from bypass.plugins.base import BaseChallengePlugin, DetectionResult, SolveResult
+from bypass.plugins import PluginRegistry
+from bypass import isolated_eval
 
-class MyChallengePlugin(BaseChallengePlugin):
-    name = "my_challenge"
+class MyCustomPlugin(BaseChallengePlugin):
+    name = "my_custom_challenge"        # 唯一标识符
     display_name = "My Custom Challenge"
-    priority = 30  # 1-100，越小优先级越高
+    priority = 30                        # 1-100，越小优先级越高，优先执行 detect
 
     def detect(self, page, ctx=None) -> DetectionResult:
-        # 检测 DOM、iframe 或标题特征
-        detected = page.locator(".my-challenge-box").count() > 0
-        return DetectionResult(
-            detected=detected,
-            challenge_type=self.name,
-            confidence=0.9 if detected else 0.0,
-            details={}
-        )
+        """快速探测页面特征，建议使用 isolated_eval 或 locator 避免污染全局 JS 环境"""
+        # 1. 检查特定 iframe 或元素
+        count = page.locator(".my-challenge-box").count()
+        if count > 0:
+            return DetectionResult(
+                detected=True,
+                challenge_type=self.name,
+                confidence=0.9,
+                details={"element_count": count}
+            )
+        return DetectionResult(detected=False)
 
     def solve(self, page, ctx=None, *, timeout_s: int = 40, **kwargs) -> SolveResult:
-        # 执行过盾逻辑并提取 Token
-        return SolveResult(
-            success=True,
-            challenge_type=self.name,
-            token="extracted_token_here",
-            clearance="cookie_here"
-        )
+        """执行具体的过盾逻辑，模拟点击/拖拽/求解，并提取 token / cookies"""
+        try:
+            # 执行点击或与 CDP 交互
+            page.locator("#challenge-checkbox").click(timeout=5000)
+            
+            # 等待结果并提取 Token / Cookie
+            token = isolated_eval(page, "() => document.querySelector('#challenge-result')?.value || ''")
+            return SolveResult(
+                success=bool(token),
+                challenge_type=self.name,
+                token=token,
+                data={"custom_meta": 123}
+            )
+        except Exception as e:
+            return SolveResult(success=False, challenge_type=self.name, error=str(e))
+
+# 注册到系统全局调度器
+PluginRegistry.register(MyCustomPlugin)
+```
+
+## 5. CDP 会话调试与网络拦截实战
+
+在多步复杂反爬逆向中，结合 CDP 监听与 Playwright 事件可以轻松抓取签名参数：
+
+```python
+from bypass import attach_cdp
+
+with attach_cdp() as (page, ctx):
+    # 启用 CDP 级别的网络监听（可选直接使用 Playwright 封装）
+    def handle_request(req):
+        if "api/v1/auth" in req.url:
+            print("Captured Auth Request:", req.url)
+            print("Headers:", req.headers)
+            print("Payload:", req.post_data)
+
+    def handle_response(res):
+        if "api/v1/auth" in res.url:
+            print("Auth Response:", res.status, res.text()[:200])
+
+    page.on("request", handle_request)
+    page.on("response", handle_response)
+    
+    # 执行后续交互
+    page.goto("https://target-site.com")
 ```
