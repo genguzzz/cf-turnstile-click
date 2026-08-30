@@ -1,20 +1,34 @@
-"""Open a page that already has Turnstile, solve, print token.
+#!/usr/bin/env python3
+"""Example: Auto-detect and solve any anti-bot challenge on a URL."""
 
-    python examples/solve_url.py https://example.com/login
-"""
-
-from __future__ import annotations
-
+import json
 import sys
+from pathlib import Path
 
-from cfturnstile import solve_url
+# Add scripts directory to sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+
+from bypass import solve_url
 
 
-def main() -> None:
+def main():
     if len(sys.argv) < 2:
-        print("usage: python examples/solve_url.py <url>", file=sys.stderr)
-        raise SystemExit(2)
-    print(solve_url(sys.argv[1]))
+        print("Usage: python3 solve_url.py <url>")
+        sys.exit(1)
+
+    url = sys.argv[1]
+    print(f"Solving challenges on: {url}...")
+    res = solve_url(url, timeout_s=45)
+
+    print("\n--- Solve Result ---")
+    print(f"Success: {res.success}")
+    print(f"Challenge Type: {res.challenge_type}")
+    if res.token:
+        print(f"Token Length: {len(res.token)}")
+    if res.clearance:
+        print(f"Clearance Cookie: {res.clearance[:20]}...")
+    if res.error:
+        print(f"Error: {res.error}")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,12 @@
 [project]
-name = "cfturnstile"
-version = "0.1.0"
-description = "Solve Cloudflare Turnstile checkboxes from Patchright: iframe locator click + CDP screenX patch"
+name = "shield-bypass"
+version = "0.2.0"
+description = "Unified Anti-Bot Challenge Bypass, Dynamic Script Injection, and Stealth Browser Automation Engine"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [{ name = "genguzzz" }]
-keywords = ["cloudflare", "turnstile", "patchright", "playwright", "captcha"]
+keywords = ["cloudflare", "turnstile", "waf", "recaptcha", "hcaptcha", "patchright", "playwright", "stealth", "anti-bot", "fingerprint", "crawler"]
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -14,6 +14,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Security",
+    "Topic :: Software Development :: Testing",
 ]
 dependencies = [
     "patchright>=1.50.0",
@@ -23,21 +25,24 @@ dependencies = [
 dev = ["pytest>=8.0.0"]
 
 [project.urls]
-Homepage = "https://github.com/genguzzz/cf-turnstile-click"
-Issues = "https://github.com/genguzzz/cf-turnstile-click/issues"
+Homepage = "https://github.com/genguzzz/shield-bypass"
+Repository = "https://github.com/genguzzz/shield-bypass"
+Issues = "https://github.com/genguzzz/shield-bypass/issues"
 
 [project.scripts]
-cf-turnstile = "cfturnstile.cli:main"
+shield-bypass = "bypass.cli:main"
+bypass = "bypass.cli:main"
+cf-turnstile = "bypass.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["cfturnstile*"]
+include = ["bypass*", "shield_bypass*"]
 
 [tool.setuptools.package-data]
-cfturnstile = ["ext/*"]
+bypass = ["ext/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

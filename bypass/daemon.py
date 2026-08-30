@@ -1,28 +1,30 @@
-"""Keep Patchright Chrome alive with the same launch_kwargs as ns.sh login."""
+"""Background daemon process maintaining long-lived Patchright Chrome."""
 
 from __future__ import annotations
 
 import os
 import signal
+import sys
 import time
 from pathlib import Path
 
-from cfturnstile.browser import launch_kwargs
-from cfturnstile.session import (
+from bypass.browser import launch_kwargs
+from bypass.config import (
     cdp_url,
+    debug_log,
     default_port,
     default_profile,
     ensure_display,
-    wait_cdp,
-    write_meta,
 )
+from bypass.session import wait_cdp, write_meta
 
 
 def main() -> None:
     os.environ.update(ensure_display(os.environ.copy()))
     port = default_port()
-    profile = Path(os.environ.get("CF_TURNSTILE_PROFILE") or default_profile())
+    profile = Path(os.environ.get("SHIELD_BYPASS_PROFILE") or default_profile())
     profile.mkdir(parents=True, exist_ok=True)
+
     kw = launch_kwargs(headless=False)
     args = list(kw.get("args") or [])
     args.extend(
@@ -32,6 +34,7 @@ def main() -> None:
         ]
     )
     kw["args"] = args
+
     from patchright.sync_api import sync_playwright
 
     stop = False
@@ -46,17 +49,18 @@ def main() -> None:
     with sync_playwright() as p:
         context = p.chromium.launch_persistent_context(str(profile), **kw)
         url = cdp_url(port)
-        wait_cdp(url, timeout_s=20)
+        wait_cdp(url, timeout_s=25.0)
         write_meta(
             {
                 "pid": os.getpid(),
                 "port": port,
                 "cdp": url,
                 "profile": str(profile),
-                "mode": "patchright",
+                "display": os.environ.get("DISPLAY", ""),
+                "started_at": time.time(),
             }
         )
-        print(f"cf-turnstile session cdp={url}", flush=True)
+        debug_log(f"Session daemon running at {url}")
         try:
             while not stop:
                 time.sleep(0.5)
