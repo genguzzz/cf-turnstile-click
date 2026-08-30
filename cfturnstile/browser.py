@@ -95,12 +95,24 @@ def launch_kwargs(*, headless: bool | str = False) -> dict:
 
 
 @contextmanager
-def chrome_context(*, headless: bool | str = False, profile_dir: str | None = None):
-    """Yield ``(page, context)`` from Patchright + Chrome/Chromium."""
+def chrome_context(*, headless: bool | str = False, profile_dir: str | None = None, cdp: str | None = None):
+    """Yield ``(page, context)`` from Patchright + Chrome/Chromium.
+
+    Default path is the original one-shot launch (same as ``ns.sh login``).
+    If ``cdp`` / ``CF_TURNSTILE_CDP`` is set, attach and leave Chrome running.
+    """
     try:
         from patchright.sync_api import sync_playwright
     except ImportError as e:
         raise TurnstileError("pip install 'cfturnstile'  (needs patchright)") from e
+
+    endpoint = (cdp or os.environ.get("CF_TURNSTILE_CDP") or "").strip()
+    if endpoint:
+        from cfturnstile.session import attach_cdp
+
+        with attach_cdp(endpoint) as (page, context):
+            yield page, context
+        return
 
     owned = profile_dir is None
     profile = profile_dir or tempfile.mkdtemp(prefix="cf-turnstile-")

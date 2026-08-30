@@ -2,7 +2,7 @@
 
 Drop-in **Cloudflare Turnstile checkbox** helper for [Patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python) / Playwright.
 
-给已有脚本加上「自动点 Turnstile 勾选框、取出 token」：系统级点击 + Chrome 扩展修补 CDP 跨域 iframe 的 `screenX/Y` 泄漏。不伪造 token，不改 Cloudflare 脚本。
+给已有脚本加上「自动点 Turnstile 勾选框、取出 token」：只点已画出的 CF widget iframe，跳过 1×1 占位和宿主空壳。Chrome 扩展修补 CDP 跨域 iframe 的 `screenX/Y` 泄漏。不伪造 token。
 
 ## Why Patchright `mouse.click` is not enough
 
@@ -16,7 +16,7 @@ This repo:
 
 - launches **system Chrome** via Patchright (`channel=chrome`, `no_viewport`, no `--enable-automation`)
 - loads `cfturnstile/ext/` (`world: MAIN`, `all_frames`) to rewrite iframe `screenX/Y` when they look like the CDP leak (`screenX ≈ clientX` and `&lt; 120`)
-- clicks the checkbox with **OS mouse** (macOS Quartz, Linux `xdotool`, Windows `mouse_event`), CDP click as fallback
+- clicks the painted CF widget iframe (checkbox square), skipping 1×1 placeholders
 
 Inspired by [Theyka/Turnstile-Solver](https://github.com/Theyka/Turnstile-Solver), [ObjectAscended screenX patcher](https://github.com/ObjectAscended/CDP-bug-MouseEvent-.screenX-.screenY-patcher), and [cdp-patches](https://github.com/Kaliiiiiiiiii-Vinyzu/CDP-Patches) (Windows/Linux only; we add macOS).
 
@@ -27,7 +27,7 @@ pip install "git+https://github.com/genguzzz/cf-turnstile-click.git"
 python -m patchright install chrome   # or use the Chrome already on the machine
 ```
 
-macOS: grant **Accessibility** to the app that launches Chrome (Terminal / iTerm / Cursor). Keep the Chrome window visible. Headless usually fails.
+Default click is iframe locator, not screen coordinates. Headless usually fails.
 
 ## Integrate (copy-paste)
 
@@ -85,6 +85,7 @@ Do **not**:
 
 - `page.evaluate(..., isolated_context=False)`
 - `add_init_script` / custom User-Agent (Patchright detection)
+- osascript / Quartz screen clicks
 - click the Turnstile iframe with `page.mouse` only (use `solve()`)
 
 ## Env
@@ -93,6 +94,22 @@ Do **not**:
 |-----|---------|
 | `CF_TURNSTILE_DEBUG=1` | stderr progress |
 | `CF_TURNSTILE_HEADLESS=1` | force headless (usually worse) |
+| `CF_TURNSTILE_CDP=http://127.0.0.1:9333` | attach to a running session (does not close Chrome) |
+
+## Long-lived Chrome session
+
+Same Chrome launch as one-shot login. Python attaches over CDP and must not ``close()`` the browser. On Linux with no ``DISPLAY``, ``session start`` launches Xvfb ``:99``.
+
+```bash
+cf-turnstile session start
+export CF_TURNSTILE_CDP=http://127.0.0.1:9333 CF_TURNSTILE_DEBUG=1
+cf-turnstile session debug probe    # no navigation
+cf-turnstile session debug solve
+cf-turnstile session debug state
+cf-turnstile session stop
+```
+
+One-shot login still launches a fresh Chrome unless ``CF_TURNSTILE_CDP`` / ``NS_LOGIN_CDP`` is set.
 
 ## API
 

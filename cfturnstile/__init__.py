@@ -12,10 +12,13 @@ Typical use::
 
 from cfturnstile.browser import chrome_context, extension_dir, launch_extension_args, launch_kwargs
 from cfturnstile.errors import TurnstileError
-from cfturnstile.solver import isolated_eval, solve, solve_url
+from cfturnstile.session import attach_cdp, start_session, stop_session
+from cfturnstile.solver import challenge_status, isolated_eval, solve, solve_url, widget_state
 
 __all__ = [
     "TurnstileError",
+    "attach_cdp",
+    "challenge_status",
     "chrome_context",
     "extension_dir",
     "isolated_eval",
@@ -23,6 +26,9 @@ __all__ = [
     "launch_kwargs",
     "solve",
     "solve_url",
+    "start_session",
+    "stop_session",
+    "widget_state",
 ]
 
 __version__ = "0.1.0"
